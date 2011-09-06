@@ -1,0 +1,16 @@
+<package>
+  <description brief="Navigation">
+
+     Navigation
+
+  </description>
+  <author>DALZIG</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/Navigation</url>
+  <depend package="roscpp"/>
+  <depend package="mst_common"/>
+
+</package>
+
+

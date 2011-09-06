@@ -1,0 +1,16 @@
+<package>
+  <description brief="Motors">
+
+     Motors
+
+  </description>
+  <author>DALZIG</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/Motors</url>
+  <depend package="roscpp"/>
+  <depend package="mst_common"/>
+
+</package>
+
+

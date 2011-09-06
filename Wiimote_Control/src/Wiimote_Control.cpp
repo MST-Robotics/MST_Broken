@@ -1,0 +1,242 @@
+/*******************************************************************************
+ * File: Wiimote_Control.cpp
+ * Auth: Chris Bessent <cmbq76>
+ *
+ * Desc: Takes info from joystick_drivers/wiimote and sends
+ *       it to motors
+ ******************************************************************************/
+
+/***********************************************************
+* ROS specific includes
+***********************************************************/
+#include "ros/ros.h"
+
+/***********************************************************
+* Message includes
+***********************************************************/
+// Wiimote messages
+#include "wiimote/RumbleControl.h"	//send to change rumble
+#include "wiimote/LEDControl.h"		//send to change LEDs
+#include "wiimote/TimedSwitch.h"
+#include "joy/joy.h"				
+#include "sensor_msgs/Imu.h"
+#include "wiimote/State.h"
+#include "std_msgs/Bool.h"
+
+// Motor message
+#include "mst_common/Velocity.h"
+
+/***********************************************************
+* Other includes
+***********************************************************/
+#include "mst_common/Topics.h"
+
+/***********************************************************
+* Global variables
+***********************************************************/
+ros::Publisher motion_pub;
+ros::Publisher ledcontrol_pub;
+ros::Publisher rumblecontrol_pub;
+
+#define BASE_SPEED 		1.0
+#define BASE_ROTATION 	1.0
+const double BOOST[5] = {1.00,1.50,1.75,2.00,2.50};
+
+#define NUNCHUK_DEADZONE 7
+#define DEADSPACE(x) ( (x <= NUNCHUK_DEADZONE) && (x >= -NUNCHUK_DEADZONE) ? 0 : x )
+
+/***********************************************************
+* Function prototypes
+***********************************************************/
+void increment_nightrider(void);
+
+/***********************************************************
+* Message Callbacks
+***********************************************************/
+void wiimote_callback(const mst_common::Velocity::ConstPtr& msg)
+{
+	double lin_vel = 0.0;
+	double ang_vel = 0.0;
+	unsigned int boost_state = 0;
+	
+	static int nightrider_state = 0;
+	static bool wiimote_suspend = false;
+	bool stop_robot = false;
+	
+	mst_common::Velocity output_msg;
+	
+	// Check for nightrider behavior for fun
+	if(msg.buttons[MSG_BTN_1])
+	{
+		increment_nightrider();
+	}
+	
+	// Check to see if suspend has changed states
+	if(msg.buttons[MSG_BTN_2])
+	{
+		wiimote_suspend = !wiimote_suspend;
+		stop_robot = true;
+	}
+	
+	if( !wiimote_suspend )
+	{
+		// Check boost buttons (A,B,C,Z)
+		if(msg.buttons[MSG_BTN_A])
+		{
+			++boost_state;
+		}
+		if(msg.buttons[MSG_BTN_B])
+		{
+			++boost_state;
+		}
+		if(msg.buttons[MSG_BTN_Z])
+		{
+			++boost_state;
+		}
+		if(msg.buttons[MSG_BTN_C])
+		{
+			++boost_state;
+		}
+		
+		// If you pick up nunchuk data, use it...
+		if(DEADZONE(msg.nunchuk_joystick_zeroed[0]) != 0 ||
+		   DEADZONE(msg.nunchuk_joystick_zeroed[1]) != 0   )
+		{
+		}
+		// otherwise, use d-pad or accelerometer
+		else
+		{
+			if(msg.buttons[MSG_BTN_A])
+			{;
+			}
+			else
+			{
+				if(msg.buttons[MSG_BTN_UP])
+				{
+					lin_vel += BASE_SPEED;
+				}
+				if(msg.buttons[MSG_BTN_DOWN])
+				{
+					lin_vel -= BASE_SPEED;
+				}
+				if(msg.buttons[MSG_BTN_LEFT])
+				{
+					ang_vel += BASE_ROTATION;
+				}
+				if(msg.buttons[MSG_BTN_RIGHT])
+				{
+					ang_vel -= BASE_ROTATION;
+				}
+			}
+		}
+		
+		lin_vel *= BOOST[boost_state];
+		ang_vel /= BOOST[boost_state];
+		
+		
+		output_msg.linear = lin_vel;
+		output_msg.angular = ang_vel;
+		motion_pub.publish(output_msg);
+	}
+	if( stop_robot )
+	{
+		output_msg.linear = 0.0;
+		output_msg.angluar = 0.0;
+		motion_pub.publish(output_msg);
+	}
+}
+
+int main(int argc, char **argv)
+{
+    ros::init(argc, argv, "Wiimote_Control");
+    ros::NodeHandle n;
+    
+    ros::Subscriber wiimote_sub = n.subscribe("wiimote/state",100,wiimote_callback);
+	
+    motion_pub = n.advertise<mst_common::Velocity>(MOTION_TOPIC,5);
+    ledcontrol_pub = n.advertise<wiimote::LEDControl>("wiimote/leds",5);
+    rumblecontrol_pub = n.advertise<wiimote::RumbleControl>("wiimote/rumble",5);
+    
+    ros::spin();
+}
+
+void toggle_nightrider(void)
+{
+	static bool active = false;
+	active = !active;
+	
+	wiimote::LEDControl  led_control_msg;
+	wiimote::TimedSwitch timed_switch;
+	
+	static const BASE_NIGHTRIDER_SPEED = 1.0;
+	static const float[] LED1_PATTERN = 
+		{
+			2.0*BASE_NIGHTRIDER_SPEED, // on  2
+			9.0*BASE_NIGHTRIDER_SPEED, // off 9
+			1.0*BASE_NIGHTRIDER_SPEED  // on  1
+		};
+	static const float[] LED2_PATTERN = 
+		{
+			0.0*BASE_NIGHTRIDER_SPEED, // on  0
+			1.0*BASE_NIGHTRIDER_SPEED, // off 1
+			3.0*BASE_NIGHTRIDER_SPEED, // on  3
+			5.0*BASE_NIGHTRIDER_SPEED, // off 5
+			3.0*BASE_NIGHTRIDER_SPEED  // on  3
+		};
+	static const float[] LED3_PATTERN = 
+		{
+			0.0*BASE_NIGHTRIDER_SPEED, // on  0
+			3.0*BASE_NIGHTRIDER_SPEED, // off 3
+			3.0*BASE_NIGHTRIDER_SPEED, // on  3
+			1.0*BASE_NIGHTRIDER_SPEED, // off 1
+			3.0*BASE_NIGHTRIDER_SPEED, // on  3
+			2.0*BASE_NIGHTRIDER_SPEED  // off 2
+		};
+	static const float[] LED4_PATTERN = 
+		{
+			0.0*BASE_NIGHTRIDER_SPEED, // on  0
+			5.0*BASE_NIGHTRIDER_SPEED, // off 5
+			3.0*BASE_NIGHTRIDER_SPEED, // on  3
+			4.0*BASE_NIGHTRIDER_SPEED, // off 4
+		};
+	
+	if(active)
+	{
+		timed_switch.switch_mode = -1; 		//repeat
+		timed_switch.num_cycles = -1;		//forever
+		
+		for(int i = 0; i < 3; i++)
+		{
+			timed_switch.pulse_pattern.push_back(LED1_PATTERN[i]);
+		}
+		led_control_msg.timed_switch_array.push_back(timed_switch);
+		
+		for(int i = 0; i < 5; i++)
+		{
+			timed_switch.pulse_pattern.push_back(LED2_PATTERN[i]);
+		}
+		led_control_msg.timed_switch_array.push_back(timed_switch);
+		
+		for(int i = 0; i < 6; i++)
+		{
+			timed_switch.pulse_pattern.push_back(LED3_PATTERN[i]);
+		}
+		led_control_msg.timed_switch_array.push_back(timed_switch);
+		
+		for(int i = 0; i < 4; i++)
+		{
+			timed_switch.pulse_pattern.push_back(LED4_PATTERN[i]);
+		}
+		led_control_msg.timed_switch_array.push_back(timed_switch);
+	}
+	else
+	{
+		timed_switch.switch_mode = 0;
+		for(int i = 0; i < 4; i++)
+		{
+			led_control_msg.timed_switch_array.push_back(timed_switch);
+		}
+	}
+	
+	led_control_pub.publish(led_control_msg);
+}

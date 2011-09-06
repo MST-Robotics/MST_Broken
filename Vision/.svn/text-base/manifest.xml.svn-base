@@ -1,0 +1,19 @@
+<package>
+  <description brief="Vision">
+
+     Vision
+
+  </description>
+  <author>DALZIG</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/Vision</url>
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+  <depend package="roscpp"/>
+  <depend package="mst_common"/>
+  <depend package="sensor_msgs"/>
+
+</package>
+
+

@@ -1,0 +1,17 @@
+<package>
+  <description brief="Wiimote_Control">
+
+     Wiimote_Control
+
+  </description>
+  <author>Dalzig</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/Wiimote_Control</url>
+  <depend package="mst_common"/>
+  <depend package="wiimote"/>
+  <depend package="roscpp"/>
+
+</package>
+
+

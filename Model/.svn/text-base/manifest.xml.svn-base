@@ -1,0 +1,17 @@
+<package>
+  <description brief="Model">
+
+     Model
+
+  </description>
+  <author>DALZIG</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/Model</url>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+  <depend package="mst_common"/>
+
+</package>
+
+
